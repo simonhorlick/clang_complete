@@ -18,6 +18,43 @@ def getCurrentFile():
   file = "\n".join(vim.eval("getline(1, '$')"))
   return (vim.current.buffer.name, file)
 
+def get_node(tu, filename, line, column):
+    #print 'getting node at %s:%s:%s' % (filename, line, column)
+    file = File.from_name(tu, filename)
+    location = SourceLocation.from_position(tu, file, line, column)
+    node = Cursor.from_location(tu, location)
+    return node
+
+def find_definition(node):
+    if (node.kind.is_reference() or node.kind.is_declaration() or
+        node.kind == CursorKind.DECL_REF_EXPR or
+        node.kind == CursorKind.MEMBER_REF_EXPR):
+        definition = node.get_definition()
+        return (definition.location.file.name,
+            definition.location.line, definition.location.column)
+    else:
+        print 'Could not find definition for node %s' % node.kind.name
+
+def getDefinition(tu, currrow, currcol):
+  node = get_node(tu, vim.current.buffer.name, currrow, currcol)
+  defloc = find_definition(node)
+  if defloc != None:
+    filename = defloc[0]
+    line = defloc[1]
+    col = defloc[2]
+    vim.command('edit '+filename)
+    vim.current.window.cursor = (line, col-1)
+
+def getCurrentDefinition():
+  row,col = vim.current.window.cursor
+  col = col + 1
+  userOptionsGlobal = splitOptions(vim.eval("g:clang_user_options"))
+  userOptionsLocal = splitOptions(vim.eval("b:clang_user_options"))
+  args = userOptionsGlobal + userOptionsLocal
+  tu = getCurrentTranslationUnit(args, getCurrentFile(),
+      vim.current.buffer.name, True)
+  getDefinition(tu, row, col)
+
 def getCurrentTranslationUnit(args, currentFile, fileName, update = False):
   if fileName in translationUnits:
     tu = translationUnits[fileName]

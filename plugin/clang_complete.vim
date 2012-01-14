@@ -514,6 +514,12 @@ function! s:ClangCompleteBinary(base)
   return l:res
 endfunction
 
+function! ClangFindDefinition()
+  if g:clang_use_library == 1
+    python getCurrentDefinition()
+  endif
+endfunction
+
 function! ClangComplete(findstart, base)
   if a:findstart
     let l:line = getline('.')
